@@ -106,21 +106,21 @@
         var theContent;
         // Create the sentence for injured only, killed only, or injured and killed. Set theContent to it.
         if (situation['killed']>0&&situation['injured']>0){
-          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
-                      ' '+theDate.getDate()+', 2016, '+situation['injured']+
-                      ' people were injured and '+situation['killed']+
-                      ' people were killed in a shooting in '+
-                      situation['city']+', '+situation['state']+'.';
+          theContent = '<div id="details"><p>On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                      ' '+theDate.getDate()+', 2016, <b>'+situation['injured']+
+                      ' people</b> were injured and <b>'+situation['killed']+
+                      ' people</b> were killed in a shooting in <b>'+
+                      situation['city']+', '+situation['state']+'</b>.</p></div>';
         } else if (situation['killed']>0){
-          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
-                    ' '+theDate.getDate()+', 2016, '+situation['killed']+
-                    ' people were killed in a shooting in '+situation['city']+
-                    ', '+situation['state']+'.';
+          theContent = '<div id="details"><p>On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                    ' '+theDate.getDate()+', 2016, <b>'+situation['killed']+
+                    ' people</b> were killed in a shooting in <b>'+situation['city']+
+                    ', '+situation['state']+'</b>.</p></div>';
         } else {
-          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
-                    ' '+theDate.getDate()+', 2016, '+situation['injured']+
-                    ' people were injured in a shooting in '+situation['city']+
-                    ', '+situation['state']+'.';
+          theContent = '<div id="details"><p>On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                    ' '+theDate.getDate()+', 2016, <b>'+situation['injured']+
+                    ' people</b> were injured in a shooting in <b>'+situation['city']+
+                    ', '+situation['state']+'</b>.</p></div>';
         }
         // Fill the infowindow with theContent and set the max width of the window.
         var infowindow = new google.maps.InfoWindow({
