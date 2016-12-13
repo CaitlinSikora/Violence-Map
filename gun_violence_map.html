@@ -1,0 +1,208 @@
+<!--API_KEY = 'AIzaSyBlMPqbDU5eFo3fQhN8RERQRphBK5FGg50'-->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Nunito+Sans|Oswald" rel="stylesheet">
+    <title>Using closures in event listeners</title>
+    <style>
+      h1 {
+        font-size:36px;
+        text-align: center;
+        font-family: 'Oswald', sans-serif;
+        margin: 3px auto;
+      }
+      h2 {
+        font-size:20px;
+        text-align: center;
+        font-family: 'Nunito Sans', sans-serif;
+        margin: 3px auto;
+      }
+      h3 {
+        font-size:16px;
+        text-align: center;
+        font-family: 'Nunito Sans', sans-serif;
+        margin: 3px auto;
+      }
+      #map {
+        height: 70%;
+        margin: 30px 90px;
+        border-style: solid;
+        border-width: 1px;
+      }
+      html, body {
+        height: 100%;
+        margin: 10px;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Mass Shootings in the United States</h1>
+    <h2>A map of mass shooting events in the U.S. during the year 2016</h2>
+    <div id="map"></div>
+    <h3>Hover over events to see details. Zoom in/out for more/less detail.</h3>
+    <script>
+
+    // Create an empty array of shooting situations. Data will be loaded as objects into this array.
+    var situations = [];
+    // Use an ajax request to load the data file.
+    $.ajax({
+        url: "violence.json",
+        // Handle the data as text.
+        dataType: "text",
+        success: function (data) {
+
+            // Parse the json data.
+            var json = $.parseJSON(data);
+            // Loop through the data to add situations to the situations array.
+            for (var i in json){
+              situations.push(json[i]);
+            }
+            // Confirm for the developer that the data has been loaded.
+            console.log('DONE LOADING JSON!!! '+situations.length+' situations loaded.');
+        }
+      });
+
+      // Initilize the map.
+      function initMap() {
+        // Declare a new Google Maps object to fill the map element.
+        var map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 4,
+          center: {lat: (39+(5/6)), lng: (98+(7/12)) } // Center the map on the center of the United States.
+        });
+        
+        // Set a bounds object to the bounds of the United States.
+        var bounds = {
+          north: 50,
+          south: 23,
+          east: -66,
+          west: -124
+        };
+
+        // Set the bounds of the map to the bounds object.
+        map.fitBounds(bounds);
+        
+        // Create a geocoder to load data for situations that are missing latitude and longitude.
+        var geocoder = new google.maps.Geocoder();
+        
+        // Loop through the situations.
+        for (var i=0; i<situations.length;i++){
+          // If the situation has no latitude, call the geocode function to find the correct latitude and lognitude.
+          if (situations[i].lat==''){
+            geocodeAddress(geocoder, map, situations[i], 100*i);
+          } else { // Otherwise, add a marker with the specifications of this situation.
+            addMarker(map, situations[i], 30*i);
+          }
+        }
+      }
+
+      // Attaches a specialized message for the info window to the situation.
+      function attachData(marker, situation) {
+        // Store the date so that we can access parts of it in a sentence.
+        var theDate = new Date(situation['date']);
+        // Declare a variable for the sentence to be added to the infowindow.
+        var theContent;
+        // Create the sentence for injured only, killed only, or injured and killed. Set theContent to it.
+        if (situation['killed']>0&&situation['injured']>0){
+          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                      ' '+theDate.getDate()+', 2016, '+situation['injured']+
+                      ' people were injured and '+situation['killed']+
+                      ' people were killed in a shooting in '+
+                      situation['city']+', '+situation['state']+'.';
+        } else if (situation['killed']>0){
+          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                    ' '+theDate.getDate()+', 2016, '+situation['killed']+
+                    ' people were killed in a shooting in '+situation['city']+
+                    ', '+situation['state']+'.';
+        } else {
+          theContent = 'On '+theDate.toLocaleString('en-us', { month: 'long' })+
+                    ' '+theDate.getDate()+', 2016, '+situation['injured']+
+                    ' people were injured in a shooting in '+situation['city']+
+                    ', '+situation['state']+'.';
+        }
+        // Fill the infowindow with theContent and set the max width of the window.
+        var infowindow = new google.maps.InfoWindow({
+          content: theContent,
+          maxWidth:200,
+        });
+        
+        // Open the infowindow on mouseover for the marker.
+        marker.addListener('mouseover', function() {
+          infowindow.open(marker.get('map'), marker);
+        });
+        
+        // Close the window on mouseout.
+        marker.addListener('mouseout', function() {
+          infowindow.close(marker.get('map'), marker);
+        });
+      }
+      
+      // Get latitude and longitude for situation with missing info.
+      function geocodeAddress(geocoder, resultsMap, situation, timeout) {
+        // Set the delay to avoid too many queries.
+        window.setTimeout(function() {
+          // Query for the geocode data.
+          geocoder.geocode({'address': situation['address']+' '+situation['city']+', '+situation['state']}, function(results, status) {
+            // If response has no errors
+            if (status === 'OK') {
+              // Create a new marker.
+              var marker = new google.maps.Marker({
+                map: resultsMap,
+                icon:{ // style the marker
+                  path: google.maps.SymbolPath.CIRCLE, // circle marker
+                  fillColor:'#ff0000', // fill red
+                  fillOpacity:0.1+(365-diffDate(situation['date']))/365, // opacity is higher for more recent event
+                  strokeOpacity:0.2+(365-diffDate(situation['date']))/800, // opacity is higher for more recent event
+                  strokeWeight:3+parseInt(situation['injured']), // black stroke is wider for more injured
+                  scale: 6+2*parseInt(situation['killed']) // center red circle is larger for more killed
+                },
+                position: results[0].geometry.location // set position of the marker on the map
+              });
+              // Add the data to the marker.
+              attachData(marker, situation);
+            }
+          });
+        }, timeout);
+      }
+
+      function addMarker(resultsMap, situation, timeout) {
+        // Set the delay for the animation
+        window.setTimeout(function() {
+          // Create a marker.
+          var marker = new google.maps.Marker({
+            map: resultsMap,
+            icon:{ // style the marker
+              path: google.maps.SymbolPath.CIRCLE, // circle marker
+              fillColor:'#ff0000', // fill red
+              fillOpacity:0.1+(365-diffDate(situation['date']))/365, // opacity is higher for more recent event
+              strokeOpacity:0.2+(365-diffDate(situation['date']))/800, // opacity is higher for more recent event
+              strokeWeight:3+parseInt(situation['injured']), // black stroke is wider for more injured
+              scale: 6+2*parseInt(situation['killed']) // center red circle is larger for more killed
+            },
+            position: {lat:parseFloat(situation['lat']),lng:parseFloat(situation['long'])}
+          });
+          // Add the data to the marker.
+          attachData(marker, situation);
+        }, timeout);
+      }
+
+      // Use a function to calculate the difference in days.
+      function diffDate(date){
+        var today = new Date();
+        var theDate = new Date(date);
+        var difference = 365*(today.getFullYear()-theDate.getFullYear())+
+          30*(today.getMonth()-theDate.getMonth())+(today.getDate()-theDate.getDate());
+        return difference;
+      }
+
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlMPqbDU5eFo3fQhN8RERQRphBK5FGg50&callback=initMap">
+    </script>
+  </body>
+</html>
